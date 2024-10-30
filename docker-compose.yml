@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:17
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ip_geo_mapper
+      POSTGRES_PASSWORD: ip_geo_mapper
+      POSTGRES_DB: ip_geo_mapper
+    ports:
+      - "5432:5432"
+  web:
+    build: .
+    command: |
+      /bin/sh -c "
+      rm -f tmp/pids/server.pid &&
+      until pg_isready -h db -p 5432 -U ip_geo_mapper; do sleep 1; done &&
+      bundle exec rails db:create &&
+      bundle exec rails db:migrate &&
+      bundle exec rails db:seed &&
+      bundle exec rails s -b '0.0.0.0'
+      "
+    volumes:
+      - .:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+
+volumes:
+  db-data:

@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    env:
+      RAILS_ENV: test
+      RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+
+    services:
+      postgres:
+        image: postgres:17
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: ip_geo_mapper
+          POSTGRES_PASSWORD: ip_geo_mapper
+        options: >-
+          --health-cmd="pg_isready -U ip_geo_mapper"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3
+
+      - name: Cache gems
+        uses: actions/cache@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gems-
+
+      - name: Install dependencies
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Set up database
+        run: |
+          cp config/database.yml config/database.yml.bak
+          sed -i 's/host:.*$/host: localhost/' config/database.yml
+          bundle exec rails db:create
+          bundle exec rails db:schema:load
+        env:
+          DATABASE_USER: ip_geo_mapper
+          DATABASE_PASSWORD: ip_geo_mapper
+
+      - name: Run RSpec tests
+        run: RAILS_ENV=test bundle exec rspec
+
+      - name: Run RuboCop
+        run: bundle exec rubocop

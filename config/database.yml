@@ -1,0 +1,24 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV.fetch("DATABASE_HOST", "db") %>
+  port: <%= ENV.fetch("DATABASE_PORT", 5432) %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  user: <%= ENV.fetch("DATABASE_USER", "ip_geo_mapper") %>
+  password: <%= ENV.fetch("DATABASE_PASSWORD", "ip_geo_mapper") %>
+
+
+development:
+  <<: *default
+  database: ip_geo_mapper_development
+
+
+test:
+  <<: *default
+  database: ip_geo_mapper_test
+
+production:
+  <<: *default
+  database: ip_geo_mapper_production
+  username: ip_geo_mapper
+  password: <%= ENV["IP_GEO_MAPPER_DATABASE_PASSWORD"] %>
